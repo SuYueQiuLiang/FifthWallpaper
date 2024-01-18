@@ -2,19 +2,30 @@ package com.fifth.wall.paper.fifthwallpaper.ui.home
 
 import android.content.Intent
 import android.graphics.drawable.Drawable
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.KeyEvent
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatTextView
 import com.fifth.wall.paper.fifthwallpaper.R
+import com.fifth.wall.paper.fifthwallpaper.ad.AdLoaderManager
+import com.fifth.wall.paper.fifthwallpaper.ad.base.FullScreenAdCallbacks
 import com.fifth.wall.paper.fifthwallpaper.ui.setting.SettingActivity
 import com.fifth.wall.paper.fifthwallpaper.ui.web.WebFifthActivity
 import com.fifth.wall.paper.fifthwallpaper.utils.FifthUtils
+import com.fifth.wall.paper.fifthwallpaper.utils.UploadUtil
+import com.google.ads.mediation.admob.AdMobAdapter
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.OnPaidEventListener
+
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var adContainer : FrameLayout
     private lateinit var mainAdapter: MainAdapter
     private lateinit var mainList: List<Drawable>
     private lateinit var mainRecycler: androidx.recyclerview.widget.RecyclerView
@@ -24,18 +35,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var atvUpdate: AppCompatTextView
     private lateinit var llMenu: LinearLayout
     private lateinit var llMenuContent: LinearLayout
+    private lateinit var adView : AdView
 
 
     private lateinit var imgTop1: ImageView
     private lateinit var imgTop2: ImageView
     private lateinit var imgTop3: ImageView
     private lateinit var imgTop4: ImageView
+    private var showing = false
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initView()
         initAdapter()
         initClick()
+        UploadUtil.session()
     }
 
     private fun initView() {
@@ -50,6 +66,49 @@ class MainActivity : AppCompatActivity() {
         imgTop2=findViewById(R.id.img_top_2)
         imgTop3=findViewById(R.id.img_top_3)
         imgTop4=findViewById(R.id.img_top_4)
+        adContainer=findViewById(R.id.ad_container)
+        adView = AdView(this)
+        adContainer.addView(adView)
+
+        adView.adUnitId = AdLoaderManager.getBannerUnitId()
+        adView.setAdSize(AdSize.SMART_BANNER)
+        adView.adListener = object : AdListener(){
+            override fun onAdClicked() {
+                AdLoaderManager.onAdClicked()
+            }
+
+            override fun onAdLoaded() {
+                adView.onPaidEventListener = OnPaidEventListener { adValue ->
+                    val loadedAdapterResponseInfo = adView.responseInfo?.loadedAdapterResponseInfo
+                    UploadUtil.ad(
+                        adValue.valueMicros, adValue.currencyCode, loadedAdapterResponseInfo?.adSourceName ?: "",
+                        "admob", AdLoaderManager.getBannerUnitId(), "sw_main_ban", "banner"
+                    )
+                }
+            }
+
+            override fun onAdImpression() {
+                AdLoaderManager.onAdShowed()
+                UploadUtil.upload("sw_ad_impression", mapOf("ad_pos_id" to "sw_main_ban"))
+            }
+        }
+
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if(AdLoaderManager.isOvertimes() || showing)
+            return
+        val extras = Bundle()
+        extras.putString("collapsible", "bottom")
+
+        val adRequest: AdRequest = AdRequest.Builder()
+            .addNetworkExtrasBundle(AdMobAdapter::class.java, extras)
+            .build()
+
+        adView.loadAd(adRequest)
+
+        UploadUtil.upload("sw_ad_chance", mapOf("ad_pos_id" to "sw_main_ban"))
     }
 
     private fun initClick() {
@@ -77,16 +136,16 @@ class MainActivity : AppCompatActivity() {
             FifthUtils.toWeb(this, "https://play.google.com/store/apps/details?id=${packageName}")
         }
         imgTop1.setOnClickListener {
-            toSettingActivity(6)
+            interstitialAd(6)
         }
         imgTop2.setOnClickListener {
-            toSettingActivity(32)
+            interstitialAd(32)
         }
         imgTop3.setOnClickListener {
-            toSettingActivity(10)
+            interstitialAd(10)
         }
         imgTop4.setOnClickListener {
-            toSettingActivity(20)
+            interstitialAd(20)
         }
     }
 
@@ -98,9 +157,25 @@ class MainActivity : AppCompatActivity() {
         mainRecycler.adapter = mainAdapter
         mainAdapter.setOnItemClickListener(object : MainAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
-                toSettingActivity(position)
+                interstitialAd(position)
             }
         })
+    }
+
+    private fun interstitialAd(position: Int){
+        if(AdLoaderManager.interstitialAd.isAdReady()) {
+            showing = true
+            AdLoaderManager.interstitialAd.showAd(this@MainActivity, object : FullScreenAdCallbacks {
+                override fun onAdDismissed() {
+                    toSettingActivity(position)
+                    showing = false
+                }
+            })
+        }
+        else {
+            AdLoaderManager.interstitialAd.loadAd(lifecycle)
+            toSettingActivity(position)
+        }
     }
 
     //item边距

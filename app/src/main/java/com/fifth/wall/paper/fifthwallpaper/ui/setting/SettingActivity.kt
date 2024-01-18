@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -11,10 +12,20 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatImageView
 import com.fifth.wall.paper.fifthwallpaper.R
+import com.fifth.wall.paper.fifthwallpaper.ad.AdLoaderManager
 import com.fifth.wall.paper.fifthwallpaper.utils.FifthUtils
 import com.fifth.wall.paper.fifthwallpaper.utils.SaveImageToGallery
+import com.fifth.wall.paper.fifthwallpaper.utils.UploadUtil
+import com.google.ads.mediation.admob.AdMobAdapter
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.OnPaidEventListener
 
 class SettingActivity : AppCompatActivity() {
+    private lateinit var adContainer : FrameLayout
+    private lateinit var adView : AdView
     private lateinit var imgDetail: AppCompatImageView
     private lateinit var imgBack: ImageView
 
@@ -50,6 +61,47 @@ class SettingActivity : AppCompatActivity() {
         llSetting = findViewById(R.id.ll_setting)
         loading = findViewById(R.id.pb_loading)
         imgBack = findViewById(R.id.imageView_back)
+        adContainer=findViewById(R.id.ad_container)
+        adView = AdView(this)
+        adContainer.addView(adView)
+
+        adView.adUnitId = AdLoaderManager.getBannerUnitId()
+        adView.setAdSize(AdSize.SMART_BANNER)
+        adView.adListener = object : AdListener(){
+            override fun onAdClicked() {
+                AdLoaderManager.onAdClicked()
+            }
+
+            override fun onAdLoaded() {
+                adView.onPaidEventListener = OnPaidEventListener { adValue ->
+                    val loadedAdapterResponseInfo = adView.responseInfo?.loadedAdapterResponseInfo
+                    UploadUtil.ad(
+                        adValue.valueMicros, adValue.currencyCode, loadedAdapterResponseInfo?.adSourceName ?: "",
+                        "admob", AdLoaderManager.getBannerUnitId(), "sw_main_ban", "banner"
+                    )
+                }
+            }
+
+            override fun onAdImpression() {
+                AdLoaderManager.onAdShowed()
+                UploadUtil.upload("sw_ad_impression", mapOf("ad_pos_id" to "sw_main_ban"))
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if(AdLoaderManager.isOvertimes())
+            return
+        val extras = Bundle()
+        extras.putString("collapsible", "bottom")
+
+        val adRequest: AdRequest = AdRequest.Builder()
+            .addNetworkExtrasBundle(AdMobAdapter::class.java, extras)
+            .build()
+
+        adView.loadAd(adRequest)
+        UploadUtil.upload("sw_ad_chance", mapOf("ad_pos_id" to "sw_main_ban"))
     }
 
     private fun iniData() {

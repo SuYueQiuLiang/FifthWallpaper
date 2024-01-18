@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -16,32 +17,43 @@
         android:theme="@style/Theme.FifthWallpaper"
         tools:targetApi="31">
         <activity
+            android:name=".ui.ad.LoadActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.first.FirstActivity"
+            android:exported="true"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:exported="true">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.home.MainActivity"
+        <activity
+            android:name=".ui.home.MainActivity"
             android:exported="false"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"/>
-        <activity android:name=".ui.setting.SettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.setting.SettingActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"/>
-        <activity android:name=".ui.setting.SuccessActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.setting.SuccessActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"/>
-        <activity android:name=".ui.web.WebFifthActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.web.WebFifthActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
     </application>
 
 </manifest>
